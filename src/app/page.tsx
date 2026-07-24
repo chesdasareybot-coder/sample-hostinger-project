@@ -1,66 +1,150 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/exhaustive-deps */
+"use client";
+
+import { useState, useEffect } from "react";
+import { Plus, Users, GraduationCap, UserX } from "lucide-react";
+import { Sidebar } from "@/components/Sidebar";
+import { StudentTable } from "@/components/StudentTable";
+import { StudentModal } from "@/components/StudentModal";
+import { Student, DUMMY_STUDENTS } from "@/types/student";
+
 export default function Home() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    const saved = localStorage.getItem("students");
+    if (saved) {
+      setStudents(JSON.parse(saved));
+    } else {
+      setStudents(DUMMY_STUDENTS);
+      localStorage.setItem("students", JSON.stringify(DUMMY_STUDENTS));
+    }
+  }, []);
+
+  const saveStudents = (newStudents: Student[]) => {
+    setStudents(newStudents);
+    localStorage.setItem("students", JSON.stringify(newStudents));
+  };
+
+  const handleSaveStudent = (studentData: Omit<Student, "id">) => {
+    if (editingStudent) {
+      const newStudents = students.map(s => 
+        s.id === editingStudent.id ? { ...studentData, id: s.id } : s
+      );
+      saveStudents(newStudents);
+    } else {
+      const newStudent: Student = {
+        ...studentData,
+        id: Math.random().toString(36).substr(2, 9)
+      };
+      saveStudents([...students, newStudent]);
+    }
+  };
+
+  const handleDeleteStudent = (id: string) => {
+    saveStudents(students.filter(s => s.id !== id));
+  };
+
+  const activeStudentsCount = students.filter(s => s.status === "Active").length;
+  const graduatedStudentsCount = students.filter(s => s.status === "Graduated").length;
+  const inactiveStudentsCount = students.filter(s => s.status === "Inactive").length;
+
+  if (!isClient) {
+    return <div className="min-h-screen bg-black" />; // Prevents hydration mismatch
+  }
+
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-purple-500 selection:text-white flex flex-col font-sans">
-      <main className="flex-1 flex flex-col items-center justify-center p-8 relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white flex font-sans selection:bg-purple-500 selection:text-white overflow-hidden">
+      <Sidebar />
+      
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto relative">
         {/* Background Gradients */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-700/30 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-700/30 blur-[120px] pointer-events-none" />
-
-        <div className="z-10 flex flex-col items-center text-center max-w-4xl space-y-8 mt-12 md:mt-0">
-          <div className="px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-sm font-medium tracking-wide text-purple-300 mb-4 inline-flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-            </span>
-            Deployed effortlessly on Hostinger
-          </div>
+        <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-purple-900/20 to-transparent pointer-events-none" />
+        
+        <div className="p-8 max-w-7xl mx-auto w-full z-10 flex flex-col gap-8">
           
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500 pb-2">
-            Next.js & Hostinger
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-zinc-400 max-w-2xl font-light leading-relaxed">
-            Experience the blazing fast performance of Next.js combined with the robust, seamless hosting of Hostinger.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 mt-8">
-            <a
-              href="https://www.hostinger.com/tutorials/how-to-deploy-nextjs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-4 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition-all duration-300 transform hover:scale-105 shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-            >
-              Deploy Your App
-            </a>
-            <a
-              href="https://nextjs.org/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-4 rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm text-white font-semibold hover:bg-white/10 transition-all duration-300 transform hover:scale-105"
-            >
-              Read the Docs
-            </a>
-          </div>
-        </div>
-
-        {/* Feature grid */}
-        <div className="z-10 grid grid-cols-1 md:grid-cols-3 gap-6 mt-24 max-w-5xl w-full">
-          {[
-            { title: "Lightning Fast", desc: "Edge caching and global CDN delivery right out of the box." },
-            { title: "Developer First", desc: "Built with TypeScript, Tailwind, and cutting edge React features." },
-            { title: "Scale to Infinity", desc: "From side projects to enterprise apps, Hostinger scales with you." }
-          ].map((feature, i) => (
-            <div key={i} className="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-colors group">
-              <h3 className="text-xl font-bold mb-3 text-white group-hover:text-purple-400 transition-colors">{feature.title}</h3>
-              <p className="text-zinc-400 leading-relaxed">{feature.desc}</p>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-white">Students</h1>
+              <p className="text-zinc-400 mt-1">Manage and track your students across all courses.</p>
             </div>
-          ))}
+            <button
+              onClick={() => {
+                setEditingStudent(null);
+                setIsModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium hover:from-purple-500 hover:to-blue-500 transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+            >
+              <Plus className="w-5 h-5" />
+              Add Student
+            </button>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-purple-500/20 text-purple-400">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-400 font-medium">Total Students</p>
+                <p className="text-2xl font-bold text-white mt-1">{students.length}</p>
+              </div>
+            </div>
+            <div className="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-emerald-500/20 text-emerald-400">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-400 font-medium">Active Students</p>
+                <p className="text-2xl font-bold text-white mt-1">{activeStudentsCount}</p>
+              </div>
+            </div>
+            <div className="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-blue-500/20 text-blue-400">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-400 font-medium">Graduates</p>
+                <p className="text-2xl font-bold text-white mt-1">{graduatedStudentsCount}</p>
+              </div>
+            </div>
+            <div className="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-red-500/20 text-red-400">
+                <UserX className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-400 font-medium">Inactive</p>
+                <p className="text-2xl font-bold text-white mt-1">{inactiveStudentsCount}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Area */}
+          <div className="flex-1">
+            <StudentTable 
+              students={students} 
+              onEdit={(student) => {
+                setEditingStudent(student);
+                setIsModalOpen(true);
+              }}
+              onDelete={handleDeleteStudent}
+            />
+          </div>
         </div>
       </main>
-      
-      <footer className="w-full py-6 text-center text-sm text-zinc-500 border-t border-white/10 relative z-10">
-        Created for demonstration purposes.
-      </footer>
+
+      <StudentModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveStudent}
+        editingStudent={editingStudent}
+      />
     </div>
   );
 }
